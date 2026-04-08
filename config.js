@@ -11,7 +11,7 @@ const CONFIG = {
             image: '177355595477477_P31837636.jpg', // 您的圖片
             sounds: [
                 { id: 'birds', name: '林間鳥鳴', url: './sound/birds.mp3', volume: 0.3 },
-                { id: 'stream', name: '溪流聲', url: './sound/stream.mp3', volume: 0.4 }
+                { id: 'stream', name: '音樂', url: './sound/swan.mp3', volume: 0.4 }
             ],
             thinking: "林間微涼的風正緩緩拂過，紳士貓正靜靜地陪在您身邊..."
         },
