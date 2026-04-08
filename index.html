@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenAmbience - 紳士貓的避風港</title>
+    <!-- 引用 Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引用外部樣式檔 -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-950 text-white h-screen flex flex-col overflow-hidden">
+
+    <!-- 轉場動畫層 -->
+    <div id="transition-grid"></div>
+    <div id="bg-overlay" class="fixed inset-0 z-[-1] opacity-40 bg-cover bg-center scale-100"></div>
+
+    <!-- 狀態提示文字 -->
+    <div id="thinking-indicator" class="text-[12px] font-semibold italic opacity-0 transition-opacity duration-500 text-right pr-6 tracking-widest">
+        <span id="thinking-text">紳士貓正在理毛</span><span class="thinking-dots">...</span>
+    </div>
+
+    <!-- 頁首區域 -->
+    <header class="p-4 md:p-6 flex justify-between items-center z-20 shrink-0 h-20">
+        <div class="flex items-center space-x-3">
+            <h1 class="text-[10px] font-light tracking-[0.5em] uppercase opacity-40">ZenAmbience</h1>
+        </div>
+        <button id="global-mute" class="p-2 opacity-30 hover:opacity-100 transition-opacity">
+            <svg id="mute-icon" xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+            </svg>
+        </button>
+    </header>
+
+    <!-- 主內容區：RWD 排版 -->
+    <main class="flex-grow flex flex-col md:flex-row justify-between overflow-hidden px-4 md:px-10 pb-6 md:pb-10 gap-4 z-10">
+        
+        <!-- 左側：音軌混音器 -->
+        <section class="w-full md:w-[30%] flex flex-col h-[40%] md:h-full overflow-hidden pt-2 md:pt-4 text-left shrink-0">
+            <div id="mix-label" class="text-[9px] uppercase tracking-[0.4em] text-slate-500 mb-4 md:mb-8 font-medium opacity-0 transition-opacity duration-1000 pl-2 font-light shrink-0">Atmospheric Mix / 氛圍混音</div>
+            <div id="sound-grid" class="flex-grow overflow-y-auto chat-scroll space-y-6 md:space-y-12 pl-2 pr-4 pb-12">
+                <!-- 由 JavaScript 動態生成音軌控制項 -->
+            </div>
+        </section>
+
+        <!-- 中間留白區 (桌面版) -->
+        <div class="hidden md:block flex-grow pointer-events-none"></div>
+
+        <!-- 右側：對話視窗 -->
+        <section class="w-full md:w-[35%] flex flex-col h-[60%] md:h-full overflow-hidden shrink-0 relative">
+            <div id="chat-messages" class="flex-1 overflow-y-auto pr-2 space-y-6 chat-scroll flex flex-col pt-4 min-h-0">
+                <!-- 聊天訊息氣泡 -->
+            </div>
+
+            <div class="mt-4 pb-4 md:pb-6 shrink-0 relative">
+                <form id="chat-form" class="flex items-end space-x-2 input-underline bg-black/40 rounded-t-lg px-4 py-2 backdrop-blur-md">
+                    <textarea id="chat-input" placeholder="訴說您的心情... (Enter 換行)" 
+                        class="flex-grow bg-transparent border-none py-3 text-sm focus:ring-0 outline-none placeholder:text-white/40 font-light text-white chat-scroll"></textarea>
+                    <button type="submit" class="opacity-80 hover:opacity-100 transition-opacity p-3 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                        </svg>
+                    </button>
+                </form>
+            </div>
+        </section>
+    </main>
+
+    <!-- 左下角場景切換選單 -->
+    <div id="scene-container" class="fixed bottom-6 left-6 md:bottom-10 md:left-10 z-30 flex items-center gap-4">
+        <button id="scene-toggle-btn" class="w-12 h-12 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 flex items-center justify-center hover:bg-white/20 transition-all shadow-2xl cursor-pointer">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+        </button>
+        <div id="scene-list" class="flex gap-2 overflow-x-auto no-scrollbar max-w-[70vw]">
+            <!-- 由 JavaScript 動態生成場景按鈕 -->
+        </div>
+    </div>
+
+    <!-- 依照正確順序引用邏輯檔案 -->
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
