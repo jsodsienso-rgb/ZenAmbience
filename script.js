@@ -2,12 +2,15 @@
 let currentSceneKey = null;
 let chatHistory = [];
 
+/**
+ * 音樂引擎：支援外部 MP3/OGG 連結，並實作 1.5 秒淡入淡出
+ */
 class AudioEngine {
     constructor() {
         this.ctx = null;
         this.masterGain = null;
-        this.activeNodes = {}; 
-        this.bufferCache = {}; 
+        this.activeNodes = {}; // 存放當前播放中的 { source, gain }
+        this.bufferCache = {}; // 快取音檔資源
         this.isMuted = false;
     }
 
@@ -23,44 +26,68 @@ class AudioEngine {
         try {
             const response = await fetch(url);
             const arrayBuffer = await response.arrayBuffer();
-            return await this.ctx.decodeAudioData(arrayBuffer);
-        } catch (e) { return null; }
+            const buffer = await this.ctx.decodeAudioData(arrayBuffer);
+            this.bufferCache[url] = buffer;
+            return buffer;
+        } catch (e) {
+            console.error("音檔載入或解碼失敗:", url, e);
+            return null;
+        }
     }
 
     async toggleSound(id, url, targetVolume, isActive) {
         this.init();
         if (this.ctx.state === 'suspended') this.ctx.resume();
+
         if (isActive) {
-            if (!this.activeNodes[id]) {
-                const buffer = await this.loadAudio(url);
-                if (!buffer) return;
-                const source = this.ctx.createBufferSource();
-                source.buffer = buffer;
-                source.loop = true;
-                const gainNode = this.ctx.createGain();
-                gainNode.gain.value = 0;
-                gainNode.connect(this.masterGain);
-                source.connect(gainNode);
-                source.start(0);
-                gainNode.gain.linearRampToValueAtTime(targetVolume, this.ctx.currentTime + 1.5);
-                this.activeNodes[id] = { source, gain: gainNode };
+            // 如果該音軌已經在播，就不重複啟動
+            if (this.activeNodes[id]) return;
+
+            const buffer = await this.loadAudio(url);
+            if (!buffer) return;
+
+            const source = this.ctx.createBufferSource();
+            source.buffer = buffer;
+            source.loop = true;
+
+            const gainNode = this.ctx.createGain();
+            gainNode.gain.value = 0; // 從靜音開始
+            gainNode.connect(this.masterGain);
+            source.connect(gainNode);
+
+            source.start(0);
+            // 1.5秒淡入效果
+            gainNode.gain.linearRampToValueAtTime(targetVolume, this.ctx.currentTime + 1.5);
+            
+            this.activeNodes[id] = { source, gain: gainNode };
+        } else {
+            // 關閉音軌
+            if (this.activeNodes[id]) {
+                const { source, gain } = this.activeNodes[id];
+                // 1.5秒淡出效果
+                gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.5);
+                setTimeout(() => {
+                    try { source.stop(); } catch(e) {}
+                    delete this.activeNodes[id];
+                }, 1600);
             }
-        } else if (this.activeNodes[id]) {
-            const { source, gain } = this.activeNodes[id];
-            gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.5);
-            setTimeout(() => { try { source.stop(); } catch(e) {} delete this.activeNodes[id]; }, 1600);
         }
     }
 
     updateVolume(id, value) {
-        if (this.activeNodes[id]) this.activeNodes[id].gain.gain.setTargetAtTime(value, this.ctx.currentTime, 0.3);
+        if (this.activeNodes[id]) {
+            this.activeNodes[id].gain.gain.setTargetAtTime(value, this.ctx.currentTime, 0.3);
+        }
     }
 
     stopAll() {
         Object.keys(this.activeNodes).forEach(id => {
             const { source, gain } = this.activeNodes[id];
             gain.gain.linearRampToValueAtTime(0, this.ctx.currentTime + 1.5);
-            setTimeout(() => { try { source.stop(); } catch(e) {} delete this.activeNodes[id]; }, 1600);
+            setTimeout(() => {
+                try { source.stop(); } catch(e) {}
+                delete this.activeNodes[id];
+            }, 1600);
         });
     }
 
@@ -88,30 +115,48 @@ function appendMessage(role, text) {
     messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
 }
 
+/**
+ * 呼叫 Vercel Serverless API
+ */
 async function callGemini(userInput, type = 'user') {
     let promptText = userInput;
     let thinkingText = "紳士貓正靜靜地聽著";
-    if (type === 'welcome') promptText = `(系統通知: 訪客剛進入此地。請以溫和的口吻說句招呼語。)`;
-    else if (type === 'scene_change') {
+    
+    if (type === 'welcome') {
+        promptText = `(系統通知: 訪客剛進入此地。請以溫和的口吻說句招呼語。)`;
+    } else if (type === 'scene_change') {
+        if (!currentSceneKey || !CONFIG.scenes[currentSceneKey]) return;
         promptText = `(系統通知: 來到 ${CONFIG.scenes[currentSceneKey].name}。說一句優雅的招呼。)`;
         thinkingText = CONFIG.scenes[currentSceneKey].thinking;
     }
     
     setThinking(true, thinkingText);
+
     try {
         const response = await fetch('/api/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ contents: chatHistory.concat([{ parts: [{ text: promptText || "您好" }] }]) })
+            body: JSON.stringify({ 
+                contents: chatHistory.concat([{ parts: [{ text: promptText || "您好" }] }]) 
+            })
         });
+        
+        if (!response.ok) throw new Error("API 回傳錯誤");
+        
         const data = await response.json();
         setThinking(false);
+        
         const text = data.text || "我就在這兒陪著您。";
-        if (type === 'user') chatHistory.push({ role: 'user', parts: [{ text: userInput }] }, { role: 'model', parts: [{ text: text }] });
+        // 儲存對話歷史（排除系統標記）
+        if (type === 'user') {
+            chatHistory.push({ role: 'user', parts: [{ text: userInput }] });
+            chatHistory.push({ role: 'model', parts: [{ text: text }] });
+        }
         return text;
     } catch (e) {
+        console.error("連線錯誤:", e);
         setThinking(false);
-        return "環境有些干擾，我正聽著您的心聲。";
+        return "環境有些干擾，我正聽著您的心聲，請繼續說。";
     }
 }
 
@@ -122,55 +167,93 @@ function setThinking(active, text = "紳士貓正靜靜地聽著") {
     el.style.opacity = active ? '1' : '0';
 }
 
+/**
+ * 切換場景邏輯：包含方格轉場動畫與背景更換
+ */
 async function switchScene(key) {
+    if (!CONFIG.scenes[key]) return;
+    
+    // 1. 執行方格轉場
     const cells = document.querySelectorAll('.grid-cell');
     const shuffled = Array.from(cells).sort(() => Math.random() - 0.5);
-    for(let i=0; i<shuffled.length; i+=12) { shuffled.slice(i, i+12).forEach(c => c.classList.add('active')); await new Promise(r => setTimeout(r, 45)); }
+    for(let i=0; i<shuffled.length; i+=12) { 
+        shuffled.slice(i, i+12).forEach(c => c.classList.add('active')); 
+        await new Promise(r => setTimeout(r, 45)); 
+    }
     
+    // 2. 更換背景與音樂
     engine.stopAll();
     currentSceneKey = key;
     const scene = CONFIG.scenes[key];
     document.getElementById('bg-overlay').style.backgroundImage = `url('${scene.image}')`; 
+    document.getElementById('mix-label').style.opacity = '0.4';
+    
     renderSoundGrid(scene);
     renderSceneTabs();
     
+    // 3. 獲取貓咪的新招呼
     const reaction = await callGemini(null, 'scene_change');
+
+    // 4. 結束轉場
     await new Promise(r => setTimeout(r, 800));
-    for(let i=0; i<shuffled.length; i+=12) { shuffled.slice(i, i+12).forEach(c => c.classList.remove('active')); await new Promise(r => setTimeout(r, 45)); }
+    for(let i=0; i<shuffled.length; i+=12) { 
+        shuffled.slice(i, i+12).forEach(c => c.classList.remove('active')); 
+        await new Promise(r => setTimeout(r, 45)); 
+    }
     appendMessage('model', reaction);
 }
 
 function renderSoundGrid(scene) {
-    const grid = document.getElementById('sound-grid'); grid.innerHTML = '';
+    const grid = document.getElementById('sound-grid'); 
+    grid.innerHTML = '';
     scene.sounds.forEach(sound => {
-        const item = document.createElement('div'); item.className = 'flex flex-col space-y-4';
-        item.innerHTML = `<span class="text-[10px] tracking-widest opacity-60 uppercase">${sound.name}</span><div class="flex items-center space-x-4"><button id="tog-${sound.id}" class="w-8 h-3 rounded-full bg-white/5 relative transition-all cursor-pointer"><div class="dot absolute left-0 top-0.5 w-2 h-2 bg-white/20 rounded-full transition-all"></div></button><input type="range" min="0" max="1" step="0.01" value="${sound.volume}" class="flex-grow h-[1px] bg-white/5 appearance-none"></div>`;
+        const item = document.createElement('div'); 
+        item.className = 'flex flex-col space-y-4';
+        item.innerHTML = `
+            <span class="text-[10px] tracking-widest opacity-60 uppercase">${sound.name}</span>
+            <div class="flex items-center space-x-4">
+                <button id="tog-${sound.id}" class="w-8 h-3 rounded-full bg-white/5 relative transition-all cursor-pointer">
+                    <div class="dot absolute left-0 top-0.5 w-2 h-2 bg-white/20 rounded-full transition-all"></div>
+                </button>
+                <input type="range" min="0" max="1" step="0.01" value="${sound.volume}" class="flex-grow h-[1px] bg-white/5 appearance-none">
+            </div>`;
         grid.appendChild(item);
-        const tog = item.querySelector(`#tog-${sound.id}`); const dot = tog.querySelector('.dot'); let active = false;
+
+        const tog = item.querySelector(`#tog-${sound.id}`); 
+        const dot = tog.querySelector('.dot'); 
+        const slider = item.querySelector('input');
+        let isActive = false;
+
         tog.onclick = () => { 
-            active = !active; 
-            tog.classList.toggle('bg-white/20', active); 
-            dot.style.transform = active ? 'translateX(18px)' : 'translateX(0)'; 
-            dot.style.background = active ? '#fff' : 'rgba(255,255,255,0.2)'; 
-            engine.toggleSound(sound.id, sound.url, item.querySelector('input').value, active); 
+            isActive = !isActive; 
+            tog.classList.toggle('bg-white/20', isActive); 
+            dot.style.transform = isActive ? 'translateX(18px)' : 'translateX(0)'; 
+            dot.style.background = isActive ? '#fff' : 'rgba(255,255,255,0.2)'; 
+            engine.toggleSound(sound.id, sound.url, slider.value, isActive); 
         };
-        item.querySelector('input').oninput = (e) => engine.updateVolume(sound.id, e.target.value);
+        slider.oninput = (e) => engine.updateVolume(sound.id, e.target.value);
     });
 }
 
 function renderSceneTabs() {
-    const list = document.getElementById('scene-list'); list.innerHTML = '';
+    const list = document.getElementById('scene-list'); 
+    list.innerHTML = '';
     Object.keys(CONFIG.scenes).forEach(key => {
         const btn = document.createElement('button');
         btn.className = `px-5 py-2 text-[9px] tracking-[0.3em] uppercase rounded-full transition-all whitespace-nowrap ${currentSceneKey === key ? 'bg-white/20 border border-white/30' : 'bg-white/5 border border-transparent'} cursor-pointer`;
-        btn.innerText = CONFIG.scenes[key].name; btn.onclick = (e) => { e.stopPropagation(); switchScene(key); toggleSceneMenu(false); };
+        btn.innerText = CONFIG.scenes[key].name; 
+        btn.onclick = (e) => { e.stopPropagation(); switchScene(key); toggleSceneMenu(false); };
         list.appendChild(btn);
     });
 }
 
 function toggleSceneMenu(force) { 
     const container = document.getElementById('scene-container'); 
-    force !== undefined ? (force ? container.classList.add('open') : container.classList.remove('open')) : container.classList.toggle('open'); 
+    if (force !== undefined) {
+        force ? container.classList.add('open') : container.classList.remove('open');
+    } else {
+        container.classList.toggle('open');
+    }
 }
 
 document.getElementById('scene-toggle-btn').onclick = (e) => { e.stopPropagation(); toggleSceneMenu(); };
@@ -188,6 +271,7 @@ chatForm.onsubmit = async (e) => {
 };
 
 window.onload = async () => {
+    // 建立轉場方格
     const grid = document.getElementById('transition-grid');
     for(let i=0; i<144; i++) {
         const cell = document.createElement('div');
