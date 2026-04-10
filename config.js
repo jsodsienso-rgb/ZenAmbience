@@ -37,7 +37,7 @@ const CONFIG = {
         'rainy': {
             name: '雨天', 
             color: 'bg-slate-900', 
-            image: 'images.jpeg', // 您的圖片
+            image: 'https://images.unsplash.com/photo-1552703042-01a6d1fc5abe?q=80&w=2070&auto=format&fit=crop', // 您的圖片
             sounds: [
                 { id: 'rain', name: '窗外雨聲', url: './sounds/rain.mp3', volume: 0.5 },
                 { id: 'thunder', name: '遠處雷鳴', url: './sounds/thunder.mp3', volume: 0.2 }
@@ -47,7 +47,7 @@ const CONFIG = {
         'urban': {
             name: '都市氛圍', 
             color: 'bg-indigo-950', 
-            image: 'e7e80b1744fbcf0483fb76160205a40b.jpg', // 您的圖片
+            image: 'https://images.unsplash.com/photo-1618340338709-027f57b98a16?q=80&w=2070&auto=format&fit=crop', // 您的圖片
             sounds: [
                 { id: 'traffic', name: '遠處車流', url: './sounds/city.mp3', volume: 0.2 }
             ],
