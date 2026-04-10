@@ -8,7 +8,7 @@ const CONFIG = {
         'nature': {
             name: '大自然', 
             color: 'bg-emerald-950', 
-            image: '177355595477477_P31837636.jpg', // 您的圖片
+            image: 'https://images.unsplash.com/photo-1440342359743-84fcb8c21f21?q=80&w=2940&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // 您的圖片
             sounds: [
                 { id: 'birds', name: '林間鳥鳴', url: './sounds/birds.mp3', volume: 0.3 },
                 { id: 'stream', name: '音樂', url: './sounds/Swan.mp3', volume: 0.4 }
