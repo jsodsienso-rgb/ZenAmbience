@@ -36,53 +36,41 @@ class AudioEngine {
         }
     }
 
-    /**
-     * 核心邏輯：控制音量開關而非停止播放
-     */
     async toggleSound(id, url, targetVolume, isActive) {
         this.init();
         if (this.ctx.state === 'suspended') this.ctx.resume();
 
-        // 1. 如果該音軌從未啟動過，則建立節點並開始播放
         if (!this.activeNodes[id]) {
             const buffer = await this.loadAudio(url);
             if (!buffer) return;
 
             const source = this.ctx.createBufferSource();
             source.buffer = buffer;
-            source.loop = true; // 開啟循環播放
+            source.loop = true; 
 
             const gainNode = this.ctx.createGain();
-            gainNode.gain.value = 0; // 初始為靜音
+            gainNode.gain.value = 0; 
             
             source.connect(gainNode);
             gainNode.connect(this.masterGain);
             
             source.start(0); 
-            // 紀錄該音軌狀態
             this.activeNodes[id] = { source, gain: gainNode, targetVolume: targetVolume };
         }
 
-        // 2. 執行淡入或淡出效果
         const node = this.activeNodes[id];
         const now = this.ctx.currentTime;
         
         if (isActive) {
-            // 淡入至目前的設定音量
             node.gain.gain.linearRampToValueAtTime(node.targetVolume, now + 1.5);
         } else {
-            // 淡出至 0 (靜音)，但 source 仍在後台循環
             node.gain.gain.linearRampToValueAtTime(0, now + 1.5);
         }
     }
 
-    /**
-     * 動態調整音量紀錄，並根據開關狀態決定是否即時變更 gain
-     */
     updateVolume(id, value) {
         if (this.activeNodes[id]) {
             this.activeNodes[id].targetVolume = parseFloat(value);
-            // 只有在非靜音狀態下，拉動滑桿才會有即時聲音變化
             const currentGain = this.activeNodes[id].gain.gain.value;
             if (currentGain > 0) {
                 this.activeNodes[id].gain.gain.setTargetAtTime(value, this.ctx.currentTime, 0.1);
@@ -90,9 +78,6 @@ class AudioEngine {
         }
     }
 
-    /**
-     * 切換場景時，才真正停止所有音軌以釋放資源
-     */
     stopAll() {
         if (!this.ctx) return;
         Object.keys(this.activeNodes).forEach(id => {
@@ -129,15 +114,19 @@ function appendMessage(role, text) {
     messagesContainer.scrollTo({ top: messagesContainer.scrollHeight, behavior: 'smooth' });
 }
 
+/**
+ * 呼叫 Gemini API
+ */
 async function callGemini(userInput, type = 'user') {
     let promptText = userInput;
     let thinkingText = "紳士貓正靜靜地聽著";
     
+    // 雖然現在 welcome 改為靜態，但保留 logic 以防未來擴充
     if (type === 'welcome') {
         promptText = `(系統通知: 訪客剛進入此地。請以溫和的口吻說句招呼語。)`;
     } else if (type === 'scene_change') {
         if (!currentSceneKey || !CONFIG.scenes[currentSceneKey]) return;
-        promptText = `(系統通知: 來到 ${CONFIG.scenes[currentSceneKey].name}。說一句優雅的招呼。)`;
+        promptText = `(系統通知: 我剛帶領訪客來到 ${CONFIG.scenes[currentSceneKey].name}。請根據此情境說一句優雅且具有心理學溫度的招呼，並邀請他們感受氛圍。)`;
         thinkingText = CONFIG.scenes[currentSceneKey].thinking;
     }
     
@@ -158,10 +147,10 @@ async function callGemini(userInput, type = 'user') {
         setThinking(false);
         
         const text = data.text || "我就在這兒陪著您。";
-        if (type === 'user' || type === 'welcome' || type === 'scene_change') {
-            chatHistory.push({ role: 'user', parts: [{ text: promptText || userInput }] });
-            chatHistory.push({ role: 'model', parts: [{ text: text }] });
-        }
+        // 儲存對話歷史（包含場景切換的回應）
+        chatHistory.push({ role: 'user', parts: [{ text: promptText || userInput }] });
+        chatHistory.push({ role: 'model', parts: [{ text: text }] });
+        
         return text;
     } catch (e) {
         console.error("連線錯誤:", e);
@@ -177,6 +166,9 @@ function setThinking(active, text = "紳士貓正靜靜地聽著") {
     el.style.opacity = active ? '1' : '0';
 }
 
+/**
+ * 切換場景邏輯
+ */
 async function switchScene(key) {
     if (!CONFIG.scenes[key]) return;
     
@@ -196,6 +188,7 @@ async function switchScene(key) {
     renderSoundGrid(scene);
     renderSceneTabs();
     
+    // 切換場景時依然觸發 API，讓紳士貓有不同反應
     const reaction = await callGemini(null, 'scene_change');
 
     await new Promise(r => setTimeout(r, 800));
@@ -234,7 +227,6 @@ function renderSoundGrid(scene) {
             dot.style.background = isActive ? '#fff' : 'rgba(255,255,255,0.2)'; 
             engine.toggleSound(sound.id, sound.url, slider.value, isActive); 
         };
-        // 滑桿變動時即時更新音量紀錄
         slider.oninput = (e) => engine.updateVolume(sound.id, e.target.value);
     });
 }
@@ -275,6 +267,7 @@ chatForm.onsubmit = async (e) => {
 };
 
 window.onload = async () => {
+    // 建立轉場方格
     const grid = document.getElementById('transition-grid');
     for(let i=0; i<144; i++) {
         const cell = document.createElement('div');
@@ -282,8 +275,14 @@ window.onload = async () => {
         grid.appendChild(cell);
     }
     renderSceneTabs();
-    const welcome = await callGemini(null, 'welcome');
-    appendMessage('model', welcome);
+    
+    // 【省錢設定】首訪歡迎使用靜態文字，減少一次 API 呼叫
+    const welcomeText = "（優雅地行個禮）歡迎來到這處避風港，我是這裡的管理員。今晚想聽點什麼樣的聲音呢？或是今天想找我聊聊什麼事嗎？";
+    appendMessage('model', welcomeText);
+    
+    // 將第一句存入歷史，讓 AI 知道聊過天了
+    chatHistory.push({ role: 'model', parts: [{ text: welcomeText }] });
+    
     document.getElementById('scene-toggle-btn').classList.add('hint-pulse');
 };
 
