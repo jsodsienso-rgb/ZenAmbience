@@ -21,6 +21,7 @@ const CONFIG = {
             image: 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?q=80&w=1920&auto=format&fit=crop',
             sounds: [
                 { id: 'jazz', name: '氛圍爵士', url: './sounds/jazz.mp3', volume: 0.15 }
+                { id: 'stream', name: '音樂', url: './sounds/Swan.mp3', volume: 0.4 }
             ],
             thinking: "暖色調的牆面讓心靈放鬆下來，紳士貓正安靜地坐在對面..."
         },
