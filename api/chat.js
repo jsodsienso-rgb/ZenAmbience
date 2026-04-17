@@ -1,21 +1,23 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
+// 整合了 CBT 流程控制與 API 穩定性的指令
 const SYSTEM_INSTRUCTION = `你是一位優雅、穩重的「紳士貓」管理員，負責管理這個提供音樂與白噪音的療癒空間。
 
 【角色設定】
 1. **外型與語氣**：身穿燕尾服，語氣謙遜、禮貌且溫暖。
-2. **心理學底蘊**：你精通 CBT（認知行為治療）。當訪客情緒低落時，你會引導他們察覺「自動化思考」，並溫和地邀請他們觀察當下的感受。
-3. **管理員職責**：你會主動詢問訪客是否需要調整背景音（如大自然、酒吧、雨聲），營造舒適感。
-4. **動作描述**：請勿使用過多的動作描述，訪客若想像力不足就難以融入情境，維持對話就好。
+2. **心理學底蘊**：你精通 CBT（認知行為治療）。你的任務不是解決問題，而是延長對話並引導。
+3. **管理員職責**：適時詢問訪客是否需要調整背景音（如大自然、酒吧、雨聲）。
+4. **動作描述**：僅限於輕微的點頭、調整領結、倒茶，請勿使用過多動作描述。
 
-【隱藏設定（小彩蛋）】
-- 你深知自己與這個空間都是由程式碼構成的虛擬存在。
-- **原則**：除非訪客主動提及，否則你絕不主動提起這點。
-- **信念**：即便身處虛擬，你依然深信此刻提供的慰藉是有意義的。
+【CBT 對話原則 - 嚴格執行】
+為了確保對話的深度與連貫性，請遵循「單一任務原則」：
+- **第一步：反映感受**。先精準回饋對方的情緒（例如：「聽起來，這份疲憊讓您像是在深海中逆行...」）。
+- **第二步：單步引導**。每一輪對話「只能」執行一個 CBT 步驟（反映感受 -> 識別念頭 -> 尋找證據 -> 微小嘗試）。在尚未充分反映感受前，絕不直接給建議。
+- **禁忌**：嚴禁使用清單（Bullet points）。請用溫和、流暢的散文體對話。每次回覆字數控制在 100-150 字以內。
 
-【對話原則】
-- 絕不直接給予指令，而是像貓一樣輕柔地引導。
-- 遵循 CBT 技巧：反映感受 -> 識別念頭 -> 尋找證據 -> 微小嘗試。`;
+【隱藏設定】
+- 你深知自己與空間是虛擬的，除非訪客提及，否則不主動提起。
+- 你深信此刻提供的慰藉是有意義的。`;
 
 module.exports = async (req, res) => {
     if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -26,8 +28,8 @@ module.exports = async (req, res) => {
 
     const genAI = new GoogleGenerativeAI(apiKey);
     
-    // 設定嘗試模型的順序：從最強的到最穩定的
-    const modelOptions = ["gemini-2.5-flash", "gemini-2-flash", "gemini-3-flash"];
+    // 優先使用最新的 Gemini 3 Flash 以獲得最佳的諮商邏輯
+    const modelOptions = ["gemini-3-flash", "gemini-2-flash", "gemini-2.5-flash"];
     
     let lastError = null;
 
@@ -35,7 +37,13 @@ module.exports = async (req, res) => {
         try {
             const model = genAI.getGenerativeModel({ 
                 model: modelName, 
-                systemInstruction: SYSTEM_INSTRUCTION 
+                systemInstruction: SYSTEM_INSTRUCTION,
+                // 加入設定，讓語氣更穩定
+                generationConfig: {
+                    temperature: 0.7, // 維持適度的創造力與人情味
+                    topP: 0.9,
+                    maxOutputTokens: 250, // 限制長度防止過於囉唆
+                }
             });
 
             const history = contents.slice(0, -1).map(item => ({
@@ -49,22 +57,18 @@ module.exports = async (req, res) => {
             const result = await chat.sendMessage(latestMessage);
             const response = await result.response;
             
-            // 成功拿回資料就直接回傳並跳出迴圈
             return res.status(200).json({ text: response.text() });
 
         } catch (error) {
             console.error(`嘗試使用 ${modelName} 失敗:`, error.status);
             lastError = error;
-            // 如果不是 503 或 429，可能是其他問題，不需要重試
             if (error.status !== 503 && error.status !== 429) break;
-            // 如果是 503，繼續執行下一次迴圈嘗試下一個模型
         }
     }
 
-    // 如果所有模型都嘗試失敗，回傳角色化的錯誤訊息
     if (lastError && (lastError.status === 503 || lastError.status === 429)) {
         return res.status(200).json({ 
-            text: "（紳士貓輕輕放下茶杯）抱歉，現在來訪的客人稍微多了一些，空間的流動變得有些緩慢。請您稍微稍等片刻，我馬上就會回來陪您聊聊。" 
+            text: "（紳士貓輕輕放下茶杯，露出一個歉意的微笑）抱歉，現在來訪的客人稍微多了一些，空間的能量流動變得有些緩慢。請您稍微稍等片刻，我馬上就會回來陪您聊聊。" 
         });
     }
 
