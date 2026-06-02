@@ -22,6 +22,7 @@ const CONFIG = {
             image: 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?q=80&w=1920&auto=format&fit=crop',
             sounds: [
                 { id: 'jazz', name: '氛圍爵士', url: './sounds/jazz.mp3', volume: 0.15 },
+                { id: 'coffenaker', name: '咖啡豆', url: './sounds/coffee maker.mp3', volume: 0.15 },
                 { id: 'stream', name: '音樂', url: './sounds/Swan.mp3', volume: 0.4 }
             ],
             thinking: "暖色調的牆面讓心靈放鬆下來，紳士貓正安靜地坐在對面..."
@@ -50,7 +51,7 @@ const CONFIG = {
             color: 'bg-indigo-950', 
             image: 'https://images.unsplash.com/photo-1618340338709-027f57b98a16?q=80&w=2070&auto=format&fit=crop', // 您的圖片
             sounds: [
-                { id: 'traffic', name: '遠處車流', url: './sounds/city.mp3', volume: 0.2 }
+                { id: 'city', name: '都市街道', url: './sounds/city.mp3', volume: 0.2 }
             ],
             thinking: "落地窗外是璀璨的流光，紳士貓正與您一同凝視著黑夜..."
         }
