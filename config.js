@@ -10,8 +10,9 @@ const CONFIG = {
             color: 'bg-emerald-950', 
             image: 'https://images.unsplash.com/photo-1440342359743-84fcb8c21f21?q=80&w=2940&auto=format&fit=crop', // 您的圖片
             sounds: [
-                { id: 'birds', name: '林間鳥鳴', url: './sounds/birds.mp3', volume: 0.3 },
-                { id: 'stream', name: '音樂', url: './sounds/Swan.mp3', volume: 0.4 }
+                { id: 'bird', name: '林間鳥鳴', url: './sounds/bird.mp3', volume: 0.4 },
+                { id: 'cicada', name: '蟬鳴不息', url: './sounds/cicada.mp3', volume: 0.3 },
+                { id: 'leave', name: '落葉有痕', url: './sounds/leave.mp3', volume: 0.2 }
             ],
             thinking: "林間微涼的風正緩緩拂過，紳士貓正靜靜地陪在您身邊..."
         },
