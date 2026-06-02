@@ -11,7 +11,8 @@ const CONFIG = {
             image: 'https://images.unsplash.com/photo-1440342359743-84fcb8c21f21?q=80&w=2940&auto=format&fit=crop', // 您的圖片
             sounds: [
                 { id: 'bird', name: '林間鳥鳴', url: './sounds/bird.mp3', volume: 0.4 },
-                { id: 'cicada', name: '蟬鳴不息', url: './sounds/cicada.mp3', volume: 0.2 },
+                { id: 'wind', name: '微風拂過', url: './sounds/wind.mp3', volume: 0.4 },
+                { id: 'cicada', name: '蟬聲不息', url: './sounds/cicada.mp3', volume: 0.2 },
                 { id: 'leave', name: '落葉有痕', url: './sounds/leave.mp3', volume: 0.5 }
             ],
             thinking: "林間微涼的風正緩緩拂過，紳士貓正靜靜地陪在您身邊..."
@@ -22,7 +23,7 @@ const CONFIG = {
             image: 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?q=80&w=1920&auto=format&fit=crop',
             sounds: [
                 { id: 'jazz', name: '氛圍爵士', url: './sounds/jazz.mp3', volume: 0.15 },
-                { id: 'coffenaker', name: '咖啡豆', url: './sounds/coffee maker.mp3', volume: 0.15 },
+                { id: 'coffenaker', name: '咖啡研磨', url: './sounds/coffee maker.mp3', volume: 0.15 },
                 { id: 'stream', name: '音樂', url: './sounds/Swan.mp3', volume: 0.4 }
             ],
             thinking: "暖色調的牆面讓心靈放鬆下來，紳士貓正安靜地坐在對面..."
