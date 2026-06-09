@@ -205,10 +205,12 @@ function renderSoundGrid(scene) {
     scene.sounds.forEach(sound => {
         const item = document.createElement('div'); 
         item.className = 'flex flex-col space-y-4';
+        
+        // 1. 【修改點】：讓按鈕的背景色直接根據預設開啟 (bg-white/20)
         item.innerHTML = `
             <span class="text-[10px] tracking-widest opacity-60 uppercase">${sound.name}</span>
             <div class="flex items-center space-x-4">
-                <button id="tog-${sound.id}" class="w-8 h-3 rounded-full bg-white/5 relative transition-all cursor-pointer">
+                <button id="tog-${sound.id}" class="w-8 h-3 rounded-full bg-white/20 relative transition-all cursor-pointer">
                     <div class="dot absolute left-0 top-0.5 w-2 h-2 bg-white/20 rounded-full transition-all"></div>
                 </button>
                 <input type="range" min="0" max="1" step="0.01" value="${sound.volume}" class="flex-grow h-[1px] bg-white/5 appearance-none">
@@ -218,7 +220,16 @@ function renderSoundGrid(scene) {
         const tog = item.querySelector(`#tog-${sound.id}`); 
         const dot = tog.querySelector('.dot'); 
         const slider = item.querySelector('input');
-        let isActive = false;
+        
+        // 2. 【修改點】：將預設狀態改為 true
+        let isActive = true;
+
+        // 3. 【修改點】：初始化小白點的位置與顏色，讓它在畫面一載入時就是「已開啟」的樣子
+        dot.style.transform = 'translateX(18px)';
+        dot.style.background = '#fff';
+
+        // 4. 【修改點】：畫面剛渲染完，立刻自動觸發音訊引擎播放（帶入音量條的預設值）
+        engine.toggleSound(sound.id, sound.url, slider.value, isActive);
 
         tog.onclick = () => { 
             isActive = !isActive; 
