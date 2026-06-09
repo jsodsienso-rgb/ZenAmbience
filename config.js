@@ -53,9 +53,9 @@ const CONFIG = {
             color: 'bg-indigo-950', 
             image: 'https://images.unsplash.com/photo-1618340338709-027f57b98a16?q=80&w=2070&auto=format&fit=crop', // 您的圖片
             sounds: [
-                { id: 'city', name: '街道行人', url: './sounds/city.mp3', volume: 0.7 },
+                { id: 'city', name: '街道行人', url: './sounds/city.mp3', volume: 0.8 },
                 { id: 'citynoise', name: '都市噪音', url: './sounds/citynoise.mp3', volume: 0.7 },
-                { id: 'citytraffic', name: '遠處車流', url: './sounds/citytraffic.mp3', volume: 0.7 }
+                { id: 'citytraffic', name: '遠處車流', url: './sounds/citytraffic.mp3', volume: 0.4 }
             ],
             thinking: "落地窗外是璀璨的流光，紳士貓正與您一同凝視著黑夜..."
         }
